@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     
     let mut trainer = Trainer::new(store.clone(), config);
-    let mut algo = RewardAggregator::new();
+    let mut algo = RewardAggregator::default();
     let results = trainer.run(&mut algo).await?;
     
     Ok(())

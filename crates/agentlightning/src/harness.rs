@@ -1,5 +1,5 @@
-use agentlightning_core::{LightningStore, Trainer, TrainerConfig, LightningAlgorithm, LlmBackend};
-use crate::{BrainFactory, AlgorithmConfig};
+use crate::{AlgorithmConfig, BrainFactory};
+use agentlightning_core::{LightningAlgorithm, LightningStore, LlmBackend, Trainer, TrainerConfig};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -24,7 +24,7 @@ impl TrainingHarness {
 
         // Hydrate Algorithm via Factory
         let algorithm = BrainFactory::build(&algo_config, llm_backend.clone())?;
-        
+
         // Initialize Trainer
         let trainer = Trainer::new(store, trainer_config);
 
@@ -46,7 +46,7 @@ impl TrainingHarness {
 
         tokio::spawn(async move {
             tracing::info!("Background training loop started");
-            
+
             while running.load(std::sync::atomic::Ordering::Relaxed) {
                 let mut trainer = trainer_ref.write().await;
                 let mut algo = algo_ref.write().await;
@@ -56,15 +56,15 @@ impl TrainingHarness {
                         if res.spans_processed > 0 {
                             tracing::debug!("Trained on {} spans", res.spans_processed);
                         }
-                    },
+                    }
                     Ok(None) => {
                         // No data, sleep briefly to avoid busy loop
-                    },
+                    }
                     Err(e) => {
                         tracing::error!("Training iteration failed: {}", e);
                     }
                 }
-                
+
                 // Release locks before sleeping
                 drop(trainer);
                 drop(algo);
@@ -78,7 +78,8 @@ impl TrainingHarness {
 
     /// Stop the training loop
     pub fn stop(&self) {
-        self.running.store(false, std::sync::atomic::Ordering::SeqCst);
+        self.running
+            .store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
     /// Hot-swap the brain at runtime

@@ -1,4 +1,6 @@
-use agentlightning_core::{LightningAlgorithm, algorithm::RewardAggregator, Result, Error, LlmBackend};
+use agentlightning_core::{
+    algorithm::RewardAggregator, Error, LightningAlgorithm, LlmBackend, Result,
+};
 use serde::Deserialize;
 
 /// Configuration for the Algorithm Selection
@@ -22,18 +24,14 @@ pub enum AlgorithmConfig {
         learning_rate: f64,
     },
     /// Agent Policy Optimization
-    Apo {
-        initial_prompt: String,
-    },
+    Apo { initial_prompt: String },
     /// Simple Reward Aggregation (Baseline)
-    Aggregator {
-        window_size: usize,
-    },
+    Aggregator { window_size: usize },
     /// Custom/Experimental
     Custom {
         name: String,
         params: serde_json::Value,
-    }
+    },
 }
 
 /// The Brain Factory: Hydrates a static config into a dynamic brain
@@ -42,58 +40,89 @@ pub struct BrainFactory;
 use std::sync::Arc;
 
 impl BrainFactory {
-    pub fn build(config: &AlgorithmConfig, llm_backend: Option<Arc<dyn LlmBackend>>) -> Result<Box<dyn LightningAlgorithm>> {
+    pub fn build(
+        config: &AlgorithmConfig,
+        llm_backend: Option<Arc<dyn LlmBackend>>,
+    ) -> Result<Box<dyn LightningAlgorithm>> {
         match config {
-            AlgorithmConfig::Ppo { input_dim, action_dim, learning_rate, clip_range, device } => {
+            AlgorithmConfig::Ppo {
+                input_dim,
+                action_dim,
+                learning_rate,
+                clip_range,
+                device,
+            } => {
                 #[cfg(feature = "ppo")]
                 {
                     use agentlightning_ppo::PpoAlgorithm;
-                    let brain = PpoAlgorithm::new(*input_dim, *action_dim, *learning_rate, *clip_range, device)
-                        .map_err(|e| Error::Training(format!("PPO init failed: {}", e)))?;
+                    let brain = PpoAlgorithm::new(
+                        *input_dim,
+                        *action_dim,
+                        *learning_rate,
+                        *clip_range,
+                        device,
+                    )
+                    .map_err(|e| Error::Training(format!("PPO init failed: {}", e)))?;
                     Ok(Box::new(brain))
                 }
                 #[cfg(not(feature = "ppo"))]
                 {
                     // Suppress unused variables warning if PPO disabled
                     let _ = (learning_rate, clip_range, device, input_dim, action_dim);
-                    Err(Error::Training("PPO feature not enabled. Add 'ppo' feature to agentlightning.".to_string()))
+                    Err(Error::Training(
+                        "PPO feature not enabled. Add 'ppo' feature to agentlightning.".to_string(),
+                    ))
                 }
             }
-            AlgorithmConfig::Grpo { group_size, beta: _, input_dim, action_dim, learning_rate } => {
+            AlgorithmConfig::Grpo {
+                group_size,
+                beta: _,
+                input_dim,
+                action_dim,
+                learning_rate,
+            } => {
                 #[cfg(feature = "grpo")]
                 {
                     use agentlightning_grpo::GrpoAlgorithm;
-                    let brain = GrpoAlgorithm::new(*input_dim, *action_dim, *learning_rate, *group_size)
-                         .map_err(|e| Error::Training(format!("GRPO init failed: {}", e)))?;
+                    let brain =
+                        GrpoAlgorithm::new(*input_dim, *action_dim, *learning_rate, *group_size)
+                            .map_err(|e| Error::Training(format!("GRPO init failed: {}", e)))?;
                     Ok(Box::new(brain))
                 }
                 #[cfg(not(feature = "grpo"))]
                 {
                     let _ = (group_size, input_dim, action_dim, learning_rate);
-                    Err(Error::Training("GRPO feature not enabled. Add 'grpo' feature to agentlightning.".to_string()))
+                    Err(Error::Training(
+                        "GRPO feature not enabled. Add 'grpo' feature to agentlightning."
+                            .to_string(),
+                    ))
                 }
             }
             AlgorithmConfig::Apo { initial_prompt } => {
                 #[cfg(feature = "apo")]
                 {
                     use agentlightning_apo::ApoAlgorithm;
-                    let backend = llm_backend.ok_or_else(|| Error::Training("APO requires an LlmBackend".to_string()))?;
+                    let backend = llm_backend
+                        .ok_or_else(|| Error::Training("APO requires an LlmBackend".to_string()))?;
                     let brain = ApoAlgorithm::new(initial_prompt.clone(), backend);
                     Ok(Box::new(brain))
                 }
                 #[cfg(not(feature = "apo"))]
                 {
                     let _ = (initial_prompt, llm_backend);
-                    Err(Error::Training("APO feature not enabled. Add 'apo' feature to agentlightning.".to_string()))
+                    Err(Error::Training(
+                        "APO feature not enabled. Add 'apo' feature to agentlightning.".to_string(),
+                    ))
                 }
             }
             AlgorithmConfig::Aggregator { window_size } => {
                 let algo = RewardAggregator::new(Some(*window_size));
                 Ok(Box::new(algo))
             }
-            AlgorithmConfig::Custom { name, .. } => {
-                Err(Error::Training(format!("Unknown custom algorithm: {}", name)))
-            }
+            AlgorithmConfig::Custom { name, .. } => Err(Error::Training(format!(
+                "Unknown custom algorithm: {}",
+                name
+            ))),
         }
     }
 }

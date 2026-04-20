@@ -1,6 +1,6 @@
 //! Span collector trait and implementations
 
-use crate::{ActionSpan, ObservationSpan, RewardSpan, Result, Span};
+use crate::{ActionSpan, ObservationSpan, Result, RewardSpan, Span};
 use serde_json::Value;
 
 /// Trait for collecting and emitting spans during agent execution
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn test_memory_collector() {
         let collector = MemoryCollector::new();
-        
+
         collector.emit_observation(json!({"test": 1})).unwrap();
         collector.emit_action(json!({"test": 2})).unwrap();
         collector.emit_reward(1.0).unwrap();

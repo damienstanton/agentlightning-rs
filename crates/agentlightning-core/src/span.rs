@@ -59,10 +59,10 @@ pub struct ObservationSpan {
     pub timestamp: DateTime<Utc>,
     pub task_id: Option<String>,
     pub agent_id: Option<String>,
-    
+
     /// Observation data (flexible JSON structure)
     pub data: Value,
-    
+
     /// Optional metadata
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Value>,
@@ -107,10 +107,10 @@ pub struct ActionSpan {
     pub timestamp: DateTime<Utc>,
     pub task_id: Option<String>,
     pub agent_id: Option<String>,
-    
+
     /// Action data (flexible JSON structure)
     pub data: Value,
-    
+
     /// Optional metadata
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Value>,
@@ -155,14 +155,14 @@ pub struct RewardSpan {
     pub timestamp: DateTime<Utc>,
     pub task_id: Option<String>,
     pub agent_id: Option<String>,
-    
+
     /// Reward value (typically -1.0 to 1.0 or similar range)
     pub reward: f64,
-    
+
     /// Optional reward source/reason
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
-    
+
     /// Optional metadata
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Value>,
@@ -249,7 +249,7 @@ mod tests {
         let obs = Span::Observation(ObservationSpan::new(json!({"test": true})));
         let json = serde_json::to_string(&obs).unwrap();
         let deserialized: Span = serde_json::from_str(&json).unwrap();
-        
+
         assert!(matches!(deserialized, Span::Observation(_)));
     }
 }
