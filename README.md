@@ -74,14 +74,14 @@ agentlightning = { path = "crates/agentlightning" }
 ## Testing
 
 ```bash
-# Run all tests
-cargo test -p agentlightning
+# Run all tests across the workspace
+cargo test --workspace
 
-# Run specific module tests
-cargo test -p agentlightning span::tests
+# Run specific module tests in the core crate
+cargo test -p agentlightning-core span::tests
 ```
 
-All 14 unit tests pass with comprehensive coverage of span types, storage, algorithms, and training.
+The test suite covers span types, storage, algorithms, and training across the workspace crates.
 
 ## References
 
