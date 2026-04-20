@@ -1,4 +1,4 @@
-use abzu_lightning_core::{LightningStore, Trainer, TrainerConfig, LightningAlgorithm, LlmBackend};
+use agentlightning_core::{LightningStore, Trainer, TrainerConfig, LightningAlgorithm, LlmBackend};
 use crate::{BrainFactory, AlgorithmConfig};
 use std::sync::Arc;
 use tokio::sync::RwLock;

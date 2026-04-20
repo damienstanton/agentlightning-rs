@@ -1,4 +1,4 @@
-use abzu_lightning_core::{LightningAlgorithm, Result, Error, Span, TrainingResult, LlmBackend};
+use agentlightning_core::{LightningAlgorithm, Result, Error, Span, TrainingResult, LlmBackend};
 use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::info;
@@ -146,7 +146,7 @@ impl LightningAlgorithm for ApoAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use abzu_lightning_core::{ObservationSpan, ActionSpan, RewardSpan, Span};
+    use agentlightning_core::{ObservationSpan, ActionSpan, RewardSpan, Span};
     use serde_json::json;
     use std::sync::Mutex;
 

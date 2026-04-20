@@ -1,10 +1,10 @@
-# abzu-lightning
+# agentlightning
 
-Rust port of Microsoft's [Agent Lightning](https://github.com/microsoft/agent-lightning) reinforcement learning framework for the Abzu ecosystem.
+Rust port of Microsoft's [Agent Lightning](https://github.com/microsoft/agent-lightning) reinforcement learning framework.
 
 ## Overview
 
-Agent Lightning provides environment-independent RL training through structured span recording. This Rust implementation eliminates Python fragility, provides native Abzu integration, and enables single-binary deployment.
+Agent Lightning provides environment-independent RL training through structured span recording. This Rust implementation eliminates Python fragility and enables single-binary deployment.
 
 ## Features
 
@@ -12,12 +12,11 @@ Agent Lightning provides environment-independent RL training through structured 
 - 💾 **Lightning Store**: Embedded Sled-based persistent storage with automatic indexing
 - 🧠 **Algorithm Interface**: Trait-based RL algorithm abstraction
 - 🔄 **Async Trainer**: Configurable training loop with batching and metrics
-- 🔌 **Plugin Integration**: Optional Abzu plugin for dashboard integration
 
 ## Quick Start
 
 ```rust
-use abzu_lightning::{
+use agentlightning::{
     LightningStore, ObservationSpan, RewardSpan, Span,
     algorithm::RewardAggregator, Trainer, TrainerConfig,
 };
@@ -27,7 +26,7 @@ use std::sync::Arc;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize store
-    let store = Arc::new(LightningStore::open("~/.abzu/lightning")?);
+    let store = Arc::new(LightningStore::open("~/.agentlightning")?);
     
     // Emit spans
     let obs = Span::Observation(
@@ -55,36 +54,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Architecture
 
 ```
-abzu-lightning/
+agentlightning/
 ├── span.rs        # Span types (Observation, Action, Reward)
 ├── collector.rs   # SpanCollector trait + implementations
 ├── store.rs       # Sled-based persistent storage
 ├── algorithm.rs   # LightningAlgorithm trait
 ├── trainer.rs     # Training loop orchestration
-└── plugin.rs      # Abzu plugin (optional, feature-gated)
 ```
 
 ## Features
 
-- **Default**: Core Lightning functionality (no dependencies on Abzu runtime)
-- **`plugin`**: Enables Abzu plugin integration (requires `abzu-runtime`)
+- **Default**: Core Lightning functionality with composable crate boundaries.
 
 ```toml
 [dependencies]
-abzu-lightning = { path = "crates/abzu-lightning" }
-
-# Or with plugin support:
-abzu-lightning = { path = "crates/abzu-lightning", features = ["plugin"] }
+agentlightning = { path = "crates/agentlightning" }
 ```
 
 ## Testing
 
 ```bash
 # Run all tests
-cargo test -p abzu-lightning
+cargo test -p agentlightning
 
 # Run specific module tests
-cargo test -p abzu-lightning span::tests
+cargo test -p agentlightning span::tests
 ```
 
 All 14 unit tests pass with comprehensive coverage of span types, storage, algorithms, and training.

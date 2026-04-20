@@ -5,15 +5,10 @@
 //! hot-swappable algorithms.
 
 // Re-export core components
-pub use abzu_lightning_core::*;
+pub use agentlightning_core::*;
 
 pub mod factory;
 pub mod harness;
-
-#[cfg(feature = "plugin")]
-pub mod plugin;
-#[cfg(feature = "plugin")]
-pub use plugin::LightningPlugin;
 
 // Re-export new runtime components
 pub use factory::{BrainFactory, AlgorithmConfig};

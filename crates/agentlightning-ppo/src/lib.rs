@@ -1,7 +1,7 @@
 mod model;
 
 use crate::model::ActorCritic;
-use abzu_lightning_core::{LightningAlgorithm, Result, Error, Span, TrainingResult};
+use agentlightning_core::{LightningAlgorithm, Result, Error, Span, TrainingResult};
 use async_trait::async_trait;
 use candle_core::{DType, Device, Tensor};
 use candle_nn::{AdamW, Optimizer, ParamsAdamW, VarBuilder, VarMap, ops};
@@ -296,7 +296,7 @@ impl LightningAlgorithm for PpoAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use abzu_lightning_core::{ObservationSpan, ActionSpan, RewardSpan};
+    use agentlightning_core::{ObservationSpan, ActionSpan, RewardSpan};
     use serde_json::json;
 
     /// Helper to create a valid transition sequence
