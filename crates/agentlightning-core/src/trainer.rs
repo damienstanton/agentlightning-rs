@@ -11,16 +11,16 @@ use tracing::{debug, info, warn};
 pub struct TrainerConfig {
     /// Task ID to train on (if None, trains on all tasks)
     pub task_id: Option<String>,
-    
+
     /// Agent ID to train on (if None, trains on all agents)
     pub agent_id: Option<String>,
-    
+
     /// Batch size (number of spans per training iteration)
     pub batch_size: usize,
-    
+
     /// Training interval (seconds between training iterations)
     pub interval_secs: u64,
-    
+
     /// Maximum number of iterations (None = run indefinitely)
     pub max_iterations: Option<usize>,
 }
@@ -63,9 +63,9 @@ impl Trainer {
         let spans = if let Some(task_id) = &self.config.task_id {
             debug!("Querying spans for task: {}", task_id);
             self.store.query_task_since(
-                task_id, 
+                task_id,
                 self.last_processed_cursor,
-                self.config.batch_size
+                self.config.batch_size,
             )?
         } else if let Some(agent_id) = &self.config.agent_id {
             // TODO: implementing query_agent_since would be symmetric
@@ -73,8 +73,8 @@ impl Trainer {
             debug!("Querying spans for agent: {}", agent_id);
             vec![]
         } else {
-             // TODO: implement global query
-             vec![]
+            // TODO: implement global query
+            vec![]
         };
 
         if spans.is_empty() {
@@ -86,10 +86,10 @@ impl Trainer {
 
         let count = spans.len();
         info!("Training on {} new spans", count);
-        
+
         // Update last processed cursor from the last span in the batch
         if let Some(last_span) = spans.last() {
-             self.last_processed_cursor = Some((last_span.timestamp(), last_span.id()));
+            self.last_processed_cursor = Some((last_span.timestamp(), last_span.id()));
         }
 
         let result_opt = algorithm.train(&spans).await?;
@@ -105,7 +105,7 @@ impl Trainer {
 
         Ok(result_opt)
     }
-    
+
     // ... remainder of file unchanged ...
 
     /// Run the training loop
@@ -124,7 +124,10 @@ impl Trainer {
 
             match self.train_iteration(algorithm).await {
                 Ok(Some(result)) => {
-                    info!("Training iteration {} complete: {:?}", iteration_count, result.metrics);
+                    info!(
+                        "Training iteration {} complete: {:?}",
+                        iteration_count, result.metrics
+                    );
                     results.push(result);
                     iteration_count += 1;
 
@@ -164,13 +167,11 @@ mod tests {
     #[tokio::test]
     async fn test_single_iteration() {
         let store = Arc::new(LightningStore::memory().unwrap());
-        
+
         // Insert test spans
         let task_id = "test-task";
         for i in 0..5 {
-            let span = Span::Reward(
-                RewardSpan::new(i as f64).with_task(task_id)
-            );
+            let span = Span::Reward(RewardSpan::new(i as f64).with_task(task_id));
             store.insert_span(&span).unwrap();
         }
 
@@ -201,13 +202,11 @@ mod tests {
     #[tokio::test]
     async fn test_run_with_max_iterations() {
         let store = Arc::new(LightningStore::memory().unwrap());
-        
+
         // Insert many spans
         let task_id = "test-task";
         for i in 0..20 {
-            let span = Span::Reward(
-                RewardSpan::new(i as f64).with_task(task_id)
-            );
+            let span = Span::Reward(RewardSpan::new(i as f64).with_task(task_id));
             store.insert_span(&span).unwrap();
         }
 

@@ -1,9 +1,9 @@
 //! Algorithm trait and training result types
 
 use crate::{Result, Span};
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use async_trait::async_trait;
 
 // Verification: Async trait enabled
 /// LLM Backend interface for Prompt Optimization
@@ -12,16 +12,15 @@ pub trait LlmBackend: Send + Sync {
     async fn generate(&self, prompt: &str) -> anyhow::Result<String>;
 }
 
-
 /// Result of a training iteration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrainingResult {
     /// Metrics produced by this training iteration
     pub metrics: HashMap<String, f64>,
-    
+
     /// Optional updated policy/weights (as binary blob)
     pub updated_weights: Option<Vec<u8>>,
-    
+
     /// Number of spans processed
     pub spans_processed: usize,
 }
@@ -133,7 +132,7 @@ impl LightningAlgorithm for RewardAggregator {
                 let reward = reward_span.reward;
                 local_total += reward;
                 local_count += 1;
-                
+
                 self.rewards.push_back(reward);
                 self.sum += reward;
 
@@ -150,7 +149,14 @@ impl LightningAlgorithm for RewardAggregator {
         let result = TrainingResult::new()
             .with_metric("mean_reward", self.mean_reward())
             .with_metric("total_reward", self.sum)
-            .with_metric("batch_mean_reward", if local_count > 0 { local_total / local_count as f64 } else { 0.0 })
+            .with_metric(
+                "batch_mean_reward",
+                if local_count > 0 {
+                    local_total / local_count as f64
+                } else {
+                    0.0
+                },
+            )
             .with_metric("reward_window_count", self.rewards.len() as f64)
             .with_spans_processed(spans.len());
 
@@ -172,7 +178,7 @@ impl LightningAlgorithm for RewardAggregator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RewardSpan, ObservationSpan};
+    use crate::{ObservationSpan, RewardSpan};
     use serde_json::json;
 
     #[tokio::test]

@@ -1,4 +1,4 @@
-use abzu_lightning_core::{LightningAlgorithm, Result, Error, Span, TrainingResult, LlmBackend};
+use agentlightning_core::{Error, LightningAlgorithm, LlmBackend, Result, Span, TrainingResult};
 use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::info;
@@ -16,7 +16,7 @@ pub struct ApoAlgorithm {
     backend: Arc<dyn LlmBackend>,
     failures: Vec<InteractionTrace>,
     batch_size: usize, // Number of failures to accumulate before optimizing
-    
+
     // State for parsing spans
     pending_obs: Option<String>,
     pending_act: Option<String>,
@@ -38,22 +38,22 @@ impl ApoAlgorithm {
         let mut prompt = String::new();
         prompt.push_str("You are an Automatic Prompt Optimizer.\n");
         prompt.push_str("Your goal is to improve the System Instruction for an AI Agent to prevent future failures.\n\n");
-        
+
         prompt.push_str("### Current System Instruction:\n");
         prompt.push_str(&format!("\"{}\"\n\n", self.current_prompt));
-        
+
         prompt.push_str("### Failure Traces (Negative Reward):\n");
         for (i, trace) in failures.iter().enumerate() {
             prompt.push_str(&format!("{}. Input: \"{}\"\n", i + 1, trace.input));
             prompt.push_str(&format!("   Action: \"{}\"\n", trace.action));
             prompt.push_str(&format!("   Reward: {}\n", trace.reward));
         }
-        
+
         prompt.push_str("\n### Task:\n");
         prompt.push_str("Analyze these failures. Identify why the agent made the wrong decision based on the current instruction.\n");
         prompt.push_str("Write a NEW, improved System Instruction that fixes these specific issues while maintaining general capability.\n");
         prompt.push_str("Output ONLY the new System Instruction text. Do not include reasoning or markdown formatting.");
-        
+
         prompt
     }
 }
@@ -77,11 +77,11 @@ impl LightningAlgorithm for ApoAlgorithm {
                 }
                 Span::Action(a) => {
                     if let Some(text) = a.data.get("text").and_then(|v| v.as_str()) {
-                         self.pending_act = Some(text.to_string());
+                        self.pending_act = Some(text.to_string());
                     } else if let Some(action) = a.data.get("action") {
-                         self.pending_act = Some(action.to_string());
+                        self.pending_act = Some(action.to_string());
                     } else {
-                         self.pending_act = Some(a.data.to_string());
+                        self.pending_act = Some(a.data.to_string());
                     }
                 }
                 Span::Reward(r) => {
@@ -101,25 +101,31 @@ impl LightningAlgorithm for ApoAlgorithm {
         }
 
         if self.failures.len() >= self.batch_size {
-            info!("APO: optimising prompt with {} failures...", self.failures.len());
-            
+            info!(
+                "APO: optimizing prompt with {} failures...",
+                self.failures.len()
+            );
+
             let optimization_prompt = self.construct_optimization_prompt(&self.failures);
-            
+
             match self.backend.generate(&optimization_prompt).await {
                 Ok(new_prompt) => {
                     let cleaned_prompt = new_prompt.trim().replace("```", ""); // Basic cleanup
-                    info!("APO: Optimization successful. New prompt length: {}", cleaned_prompt.len());
-                    
+                    info!(
+                        "APO: Optimization successful. New prompt length: {}",
+                        cleaned_prompt.len()
+                    );
+
                     self.current_prompt = cleaned_prompt.clone();
                     self.failures.clear(); // Clear buffer after optimization
-                    
+
                     let result = TrainingResult::new()
                         .with_metric("failures_processed", self.batch_size as f64)
                         .with_weights(self.current_prompt.as_bytes().to_vec())
                         .with_spans_processed(spans.len());
-                        
+
                     return Ok(Some(result));
-                },
+                }
                 Err(e) => {
                     tracing::error!("APO Backend Error: {}", e);
                     // Keep failures to retry? Or clear to avoid stuck loop?
@@ -146,7 +152,7 @@ impl LightningAlgorithm for ApoAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use abzu_lightning_core::{ObservationSpan, ActionSpan, RewardSpan, Span};
+    use agentlightning_core::{ActionSpan, ObservationSpan, RewardSpan, Span};
     use serde_json::json;
     use std::sync::Mutex;
 
@@ -208,11 +214,11 @@ mod tests {
     async fn test_negative_reward_adds_failure() {
         let backend = MockLlmBackend::new("improved");
         let mut algo = ApoAlgorithm::new("prompt".to_string(), backend);
-        
+
         // Single failure - should accumulate but not trigger optimization
         let spans = make_failure("input", "wrong action", -1.0);
         algo.train(&spans).await.unwrap();
-        
+
         assert_eq!(algo.failures.len(), 1);
     }
 
@@ -220,22 +226,30 @@ mod tests {
     async fn test_positive_reward_does_not_add_failure() {
         let backend = MockLlmBackend::new("improved");
         let mut algo = ApoAlgorithm::new("prompt".to_string(), backend);
-        
+
         let spans = make_failure("input", "good action", 1.0); // Positive reward
         algo.train(&spans).await.unwrap();
-        
-        assert_eq!(algo.failures.len(), 0, "Positive rewards should not add failures");
+
+        assert_eq!(
+            algo.failures.len(),
+            0,
+            "Positive rewards should not add failures"
+        );
     }
 
     #[tokio::test]
     async fn test_zero_reward_does_not_add_failure() {
         let backend = MockLlmBackend::new("improved");
         let mut algo = ApoAlgorithm::new("prompt".to_string(), backend);
-        
+
         let spans = make_failure("input", "neutral action", 0.0);
         algo.train(&spans).await.unwrap();
-        
-        assert_eq!(algo.failures.len(), 0, "Zero rewards should not add failures");
+
+        assert_eq!(
+            algo.failures.len(),
+            0,
+            "Zero rewards should not add failures"
+        );
     }
 
     // ============ OPTIMIZATION TESTS ============
@@ -245,16 +259,19 @@ mod tests {
         let backend = MockLlmBackend::new("IMPROVED PROMPT");
         let mut algo = ApoAlgorithm::new("original".to_string(), backend.clone());
         algo.batch_size = 2; // Lower threshold for testing
-        
+
         // Add failures one by one
         let spans1 = make_failure("input1", "bad1", -1.0);
         let result1 = algo.train(&spans1).await.unwrap();
         assert!(result1.is_none(), "Should not optimize with 1 failure");
-        
+
         let spans2 = make_failure("input2", "bad2", -0.5);
         let result2 = algo.train(&spans2).await.unwrap();
-        assert!(result2.is_some(), "Should optimize after reaching batch_size");
-        
+        assert!(
+            result2.is_some(),
+            "Should optimize after reaching batch_size"
+        );
+
         // Verify prompt was updated
         assert_eq!(algo.current_prompt, "IMPROVED PROMPT");
         assert_eq!(backend.get_call_count(), 1);
@@ -265,11 +282,14 @@ mod tests {
         let backend = MockLlmBackend::new("new prompt");
         let mut algo = ApoAlgorithm::new("original".to_string(), backend);
         algo.batch_size = 1;
-        
+
         let spans = make_failure("input", "bad", -1.0);
         algo.train(&spans).await.unwrap();
-        
-        assert!(algo.failures.is_empty(), "Failures should be cleared after optimization");
+
+        assert!(
+            algo.failures.is_empty(),
+            "Failures should be cleared after optimization"
+        );
     }
 
     #[tokio::test]
@@ -277,10 +297,10 @@ mod tests {
         let backend = MockLlmBackend::new("new prompt content");
         let mut algo = ApoAlgorithm::new("original".to_string(), backend);
         algo.batch_size = 1;
-        
+
         let spans = make_failure("input", "bad", -1.0);
         let result = algo.train(&spans).await.unwrap().unwrap();
-        
+
         assert!(result.updated_weights.is_some());
         let weights = result.updated_weights.unwrap();
         assert_eq!(String::from_utf8(weights).unwrap(), "new prompt content");
@@ -292,13 +312,13 @@ mod tests {
     fn test_optimization_prompt_includes_current_prompt() {
         let backend = MockLlmBackend::new("improved");
         let algo = ApoAlgorithm::new("You are a helpful assistant.".to_string(), backend);
-        
+
         let traces = vec![InteractionTrace {
             input: "test input".to_string(),
             action: "test action".to_string(),
             reward: -1.0,
         }];
-        
+
         let prompt = algo.construct_optimization_prompt(&traces);
         assert!(prompt.contains("You are a helpful assistant."));
     }
@@ -307,15 +327,13 @@ mod tests {
     fn test_optimization_prompt_includes_failure_details() {
         let backend = MockLlmBackend::new("improved");
         let algo = ApoAlgorithm::new("prompt".to_string(), backend);
-        
-        let traces = vec![
-            InteractionTrace {
-                input: "user said hello".to_string(),
-                action: "responded rudely".to_string(),
-                reward: -2.0,
-            },
-        ];
-        
+
+        let traces = vec![InteractionTrace {
+            input: "user said hello".to_string(),
+            action: "responded rudely".to_string(),
+            reward: -2.0,
+        }];
+
         let prompt = algo.construct_optimization_prompt(&traces);
         assert!(prompt.contains("user said hello"));
         assert!(prompt.contains("responded rudely"));
@@ -328,7 +346,7 @@ mod tests {
     fn test_update_policy_sets_prompt() {
         let backend = MockLlmBackend::new("x");
         let mut algo = ApoAlgorithm::new("old".to_string(), backend);
-        
+
         algo.update_policy(b"new prompt from weights").unwrap();
         assert_eq!(algo.current_prompt, "new prompt from weights");
     }
@@ -337,10 +355,10 @@ mod tests {
     fn test_update_policy_rejects_invalid_utf8() {
         let backend = MockLlmBackend::new("x");
         let mut algo = ApoAlgorithm::new("prompt".to_string(), backend);
-        
+
         let invalid_utf8 = vec![0xff, 0xfe, 0x00, 0x01];
         let result = algo.update_policy(&invalid_utf8);
-        
+
         assert!(result.is_err());
     }
 
@@ -350,7 +368,7 @@ mod tests {
     async fn test_empty_spans_returns_none() {
         let backend = MockLlmBackend::new("improved");
         let mut algo = ApoAlgorithm::new("prompt".to_string(), backend);
-        
+
         let result = algo.train(&[]).await.unwrap();
         assert!(result.is_none());
     }
@@ -359,15 +377,17 @@ mod tests {
     async fn test_spans_without_complete_trace_ignored() {
         let backend = MockLlmBackend::new("improved");
         let mut algo = ApoAlgorithm::new("prompt".to_string(), backend);
-        
+
         // Only observation, no action/reward pair
         let spans = vec![
             Span::Observation(ObservationSpan::new(json!({ "text": "hello" }))),
             Span::Reward(RewardSpan::new(-1.0)), // Reward without preceding action
         ];
         algo.train(&spans).await.unwrap();
-        
-        assert!(algo.failures.is_empty(), "Incomplete traces should not add failures");
+
+        assert!(
+            algo.failures.is_empty(),
+            "Incomplete traces should not add failures"
+        );
     }
 }
-

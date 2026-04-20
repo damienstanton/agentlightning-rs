@@ -1,10 +1,10 @@
 [package]
-name = "abzu-lightning-ppo"
+name = "agentlightning-ppo"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-abzu-lightning-core = { path = "../abzu-lightning-core" }
+agentlightning-core = { path = "../agentlightning-core" }
 candle-core = "0.9.2"
 candle-nn = "0.9.2"
 anyhow = "1.0"

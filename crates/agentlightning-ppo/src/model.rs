@@ -1,5 +1,5 @@
-use candle_core::{Result, Tensor, Module};
-use candle_nn::{Linear, VarBuilder, linear};
+use candle_core::{Module, Result, Tensor};
+use candle_nn::{linear, Linear, VarBuilder};
 
 pub struct ActorCritic {
     actor_layers: Vec<Linear>,

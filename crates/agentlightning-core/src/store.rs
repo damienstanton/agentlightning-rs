@@ -27,8 +27,8 @@ impl LightningStore {
     /// Insert a span into the store
     pub fn insert_span(&self, span: &Span) -> Result<()> {
         // Generate key: timestamp_spanid
-        // Use big-endian for correct lex sorting of timestamps if using raw bytes, 
-        // but string format is also sortable if fixed width. 
+        // Use big-endian for correct lex sorting of timestamps if using raw bytes,
+        // but string format is also sortable if fixed width.
         // Using nanoseconds ensures high precision.
         let ts = span.timestamp().timestamp_nanos_opt().unwrap_or(0);
         let key = format!("{:019}_{}", ts, span.id());
@@ -63,8 +63,8 @@ impl LightningStore {
 
     /// Query spans for a task since a specific cursor (timestamp, uuid)
     pub fn query_task_since(
-        &self, 
-        task_id: &str, 
+        &self,
+        task_id: &str,
         cursor: Option<(DateTime<Utc>, uuid::Uuid)>,
         limit: usize,
     ) -> Result<Vec<Span>> {
@@ -74,7 +74,7 @@ impl LightningStore {
         let start_key = if let Some((dt, id)) = cursor {
             let ts = dt.timestamp_nanos_opt().unwrap_or(0);
             // Start strictly after the cursor: append a byte larger than any valid key suffix
-            format!("{:019}_{}\0", ts, id) 
+            format!("{:019}_{}\0", ts, id)
         } else {
             "".to_string()
         };
@@ -107,14 +107,10 @@ impl LightningStore {
     }
 
     /// Query spans within a time range
-    pub fn query_time_range(
-        &self,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
-    ) -> Result<Vec<Span>> {
+    pub fn query_time_range(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Vec<Span>> {
         let start_ts = start.timestamp_nanos_opt().unwrap_or(0);
         let end_ts = end.timestamp_nanos_opt().unwrap_or(i64::MAX);
-        
+
         // Keys are formatted as {:019}_{uuid}
         let start_key = format!("{:019}_", start_ts);
         let end_key = format!("{:019}_\x7f", end_ts); // \x7f is higher than any uuid char
@@ -133,7 +129,7 @@ impl LightningStore {
     /// Get all tasks with recorded spans
     pub fn list_tasks(&self) -> Result<Vec<String>> {
         let mut tasks = Vec::new();
-        
+
         for name in self.db.tree_names() {
             let name_str = String::from_utf8_lossy(&name);
             if let Some(task_id) = name_str.strip_prefix("task:") {
@@ -147,7 +143,7 @@ impl LightningStore {
     /// Get all agents with recorded spans
     pub fn list_agents(&self) -> Result<Vec<String>> {
         let mut agents = Vec::new();
-        
+
         for name in self.db.tree_names() {
             let name_str = String::from_utf8_lossy(&name);
             if let Some(agent_id) = name_str.strip_prefix("agent:") {
@@ -175,7 +171,7 @@ impl LightningStore {
     pub fn list_resources(&self) -> Result<Vec<String>> {
         let resource_tree = self.db.open_tree("resources")?;
         let mut keys = Vec::new();
-        
+
         for item in resource_tree.iter() {
             let (key, _) = item?;
             keys.push(String::from_utf8_lossy(&key).to_string());
