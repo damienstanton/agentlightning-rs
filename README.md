@@ -21,12 +21,13 @@ use agentlightning::{
     algorithm::RewardAggregator, Trainer, TrainerConfig,
 };
 use serde_json::json;
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize store
-    let store = Arc::new(LightningStore::open("~/.agentlightning")?);
+    let store_path = env::temp_dir().join("agentlightning");
+    let store = Arc::new(LightningStore::open(store_path)?);
     
     // Emit spans
     let obs = Span::Observation(
